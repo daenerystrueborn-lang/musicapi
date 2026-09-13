@@ -88,6 +88,13 @@ export default async function handler(req, res) {
     '--no-warnings',
     '--no-playlist',
     '-f', 'bestaudio[ext=m4a]/bestaudio/best',
+    // The "web" client (yt-dlp's default) requires a PO token that only
+    // real browser JS can generate — something yt-dlp can't produce on
+    // its own, which is what causes "Sign in to confirm you're not a
+    // bot" and "page needs to be reloaded" on server IPs. The android
+    // client uses a different auth path that doesn't require this token,
+    // so it often works from datacenter IPs where the web client won't.
+    '--extractor-args', 'youtube:player_client=android',
   ]
 
   const cookies = getCookiesPath()
