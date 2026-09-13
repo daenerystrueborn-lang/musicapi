@@ -1,0 +1,9 @@
+{
+  "buildCommand": "npm run build",
+  "functions": {
+    "api/song.js": {
+      "maxDuration": 10,
+      "includeFiles": "bin/**"
+    }
+  }
+}
