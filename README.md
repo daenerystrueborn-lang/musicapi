@@ -56,6 +56,42 @@ const song = await res.json()
 // song.audioUrl -> download this yourself, same as your existing fetchBuffer()
 ```
 
+## Fixing "Sign in to confirm you're not a bot"
+
+YouTube has been aggressively blocking anonymous requests from cloud/server
+IPs (like Vercel's) with this error. The fix is to give yt-dlp real browser
+cookies so it looks like a logged-in session instead of an anonymous bot.
+
+**1. Install a cookie export extension** in Chrome or Firefox — search for
+   "Get cookies.txt LOCALLY" (a well-reviewed, open-source extension).
+
+**2. Log into YouTube** in that browser (any Google account works, doesn't
+   need to be special in any way).
+
+**3. On youtube.com, click the extension and export cookies** — it'll give
+   you a `cookies.txt` file in Netscape format.
+
+**4. Copy the entire contents of that file.**
+
+**5. In your Vercel project dashboard:** Settings → Environment Variables →
+   add a new variable:
+   - Name: `YT_COOKIES`
+   - Value: paste the full contents of `cookies.txt`
+   - Apply to: Production (and Preview if you want it there too)
+
+**6. Redeploy** (Vercel → Deployments → the "..." menu → Redeploy, or just
+   push a new commit) so the function picks up the new environment variable.
+
+**Security note:** this cookies file represents a real logged-in YouTube
+session. Never commit it to a public repo or share it — only paste it into
+Vercel's environment variable field, which is private to your project.
+Consider using a throwaway/secondary Google account rather than your main
+one, since this session lives on a server rather than your own device.
+
+**Cookies expire eventually** (Google periodically invalidates sessions).
+If the bot-detection error comes back after a while, just repeat steps 1-6
+with a fresh export.
+
 ## Limitations / things to know
 
 - **Hobby plan timeout (10s):** extraction is given an internal 8s budget

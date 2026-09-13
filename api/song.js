@@ -24,6 +24,7 @@ import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import path from 'node:path'
 import fs from 'node:fs'
+import os from 'node:os'
 
 const execFileAsync = promisify(execFile)
 
@@ -31,6 +32,26 @@ const execFileAsync = promisify(execFile)
 // gets there). Vercel includes files referenced like this in the function
 // bundle automatically when using the Node.js runtime.
 const YTDLP_PATH = path.join(process.cwd(), 'bin', 'yt-dlp')
+
+// YouTube increasingly blocks anonymous/datacenter requests with
+// "Sign in to confirm you're not a bot". Passing real browser cookies
+// (exported from a logged-in YouTube session) makes yt-dlp look like an
+// authenticated browser instead of an anonymous script, which avoids this.
+//
+// Set the YT_COOKIES environment variable in Vercel's project settings to
+// the full contents of a cookies.txt file (Netscape format), exported via
+// a browser extension like "Get cookies.txt LOCALLY" while logged into
+// YouTube. See README.md for the full walkthrough.
+let cookiesPath = null
+function getCookiesPath() {
+  if (cookiesPath) return cookiesPath
+  const raw = process.env.YT_COOKIES
+  if (!raw) return null
+  const p = path.join(os.tmpdir(), 'yt-cookies.txt')
+  fs.writeFileSync(p, raw)
+  cookiesPath = p
+  return p
+}
 
 function isYouTubeUrl(str) {
   return /(?:youtube\.com|youtu\.be)/i.test(str)
@@ -51,17 +72,24 @@ export default async function handler(req, res) {
   // or a direct URL if one was passed in.
   const target = isYouTubeUrl(q) ? q : `ytsearch1:${q}`
 
+  const args = [
+    target,
+    '--dump-json',
+    '--no-download',
+    '--no-warnings',
+    '--no-playlist',
+    '-f', 'bestaudio[ext=m4a]/bestaudio/best',
+  ]
+
+  const cookies = getCookiesPath()
+  if (cookies) {
+    args.push('--cookies', cookies)
+  }
+
   try {
     const { stdout } = await execFileAsync(
       YTDLP_PATH,
-      [
-        target,
-        '--dump-json',
-        '--no-download',
-        '--no-warnings',
-        '--no-playlist',
-        '-f', 'bestaudio[ext=m4a]/bestaudio/best',
-      ],
+      args,
       {
         timeout: 8_000, // stay under Vercel's 10s Hobby limit with margin
         maxBuffer: 10 * 1024 * 1024,
@@ -87,9 +115,14 @@ export default async function handler(req, res) {
       sourceUrl: info.webpage_url || `https://www.youtube.com/watch?v=${info.id}`,
     })
   } catch (e) {
-    const timedOut = e.killed || e.signal === 'SIGTERM'
+    const timedOut  = e.killed || e.signal === 'SIGTERM'
+    const botBlocked = /Sign in to confirm/i.test(e.message || '')
     return res.status(timedOut ? 504 : 500).json({
-      error: timedOut ? 'extraction timed out' : (e.message || 'extraction failed'),
+      error: timedOut
+        ? 'extraction timed out'
+        : botBlocked
+          ? 'YouTube is blocking this request as a bot — set the YT_COOKIES environment variable (see README.md)'
+          : (e.message || 'extraction failed'),
     })
   }
 }
