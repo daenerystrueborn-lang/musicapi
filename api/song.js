@@ -24,6 +24,7 @@ import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import path from 'node:path'
 import fs from 'node:fs'
+import os from 'node:os'
 
 const execFileAsync = promisify(execFile)
 
@@ -40,10 +41,21 @@ const YTDLP_PATH = path.join(process.cwd(), 'bin', 'yt-dlp')
 // Cookies are read from cookies.txt committed at the project root (only
 // safe because this repo is private — never commit this to a public repo).
 // See README.md for how to set this up.
-const COOKIES_FILE_PATH = path.join(process.cwd(), 'cookies.txt')
+//
+// yt-dlp writes updated cookies back to whatever file it's pointed at
+// after each run — but Vercel's deployed bundle (process.cwd()) is
+// read-only at runtime, which crashes yt-dlp with an OSError. So we copy
+// the committed cookies.txt into /tmp (the one writable directory in a
+// Vercel function) on each cold start, and point yt-dlp at that copy.
+const COOKIES_SOURCE_PATH = path.join(process.cwd(), 'cookies.txt')
+const COOKIES_TMP_PATH    = path.join(os.tmpdir(), 'cookies.txt')
 
 function getCookiesPath() {
-  return fs.existsSync(COOKIES_FILE_PATH) ? COOKIES_FILE_PATH : null
+  if (!fs.existsSync(COOKIES_SOURCE_PATH)) return null
+  if (!fs.existsSync(COOKIES_TMP_PATH)) {
+    fs.copyFileSync(COOKIES_SOURCE_PATH, COOKIES_TMP_PATH)
+  }
+  return COOKIES_TMP_PATH
 }
 
 function isYouTubeUrl(str) {
