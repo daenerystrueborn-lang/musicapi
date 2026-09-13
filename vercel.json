@@ -1,5 +1,6 @@
 {
   "buildCommand": "npm run build",
+  "outputDirectory": "public",
   "functions": {
     "api/song.js": {
       "maxDuration": 10,
