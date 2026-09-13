@@ -62,61 +62,45 @@ YouTube has been aggressively blocking anonymous requests from cloud/server
 IPs (like Vercel's) with this error. The fix is to give yt-dlp real browser
 cookies so it looks like a logged-in session instead of an anonymous bot.
 
-**⚠️ This only works safely because this repo is private.** Each cookies
+**⚠️ This only works safely because this repo is private.** The cookies
 file is a real, live YouTube session — anyone with it can access that
-account's session. Never commit these to a public repo. If this repo is
-ever made public, remove all `cookies*.txt` files and rotate (re-export)
-the cookies first.
+account's session. Never commit it to a public repo. If this repo is ever
+made public, remove `cookies.txt` and rotate (re-export) the cookies first.
 
-### Using multiple accounts (recommended)
-
-If one account gets flagged or its cookies expire, having a couple of
-backup accounts means the API keeps working instead of going down
-entirely. `song.js` automatically looks for these filenames, in order,
-and tries each one until one succeeds:
-
-```
-cookies.txt
-cookies1.txt
-cookies2.txt
-cookies3.txt
-```
-
-You don't need all of them — even just `cookies.txt` alone works fine.
-Add more only if you want the fallback behavior.
+> **Note on multiple accounts:** trying several cookie files per request
+> was considered, to fall back to a backup account if one gets blocked.
+> It doesn't fit Vercel Hobby's 10-second function limit though — each
+> yt-dlp attempt needs most of that budget on its own, so splitting time
+> across several attempts just causes timeouts. Stick to one cookies.txt;
+> if it gets flagged, replace it with a fresh export (steps below).
 
 **1. Install a cookie export extension** in Chrome or Firefox — search for
    "Get cookies.txt LOCALLY" (a well-reviewed, open-source extension).
 
-**2. Log into YouTube** with a Google account — ideally secondary/throwaway
-   accounts rather than your main one, since these sessions live on a
-   server. Use a different account for each cookies file.
+**2. Log into YouTube** in that browser — ideally a secondary/throwaway
+   Google account rather than your main one, since this session will live
+   on a server.
 
-**3. On youtube.com, click the extension and export cookies** as a
-   `.txt` file (Netscape format), once per account.
+**3. On youtube.com, click the extension and export cookies** as
+   `cookies.txt` (Netscape format).
 
-**4. Place the files at the project root**, named `cookies.txt`,
-   `cookies1.txt`, `cookies2.txt`, etc. — same folder as `package.json`
-   and `vercel.json`.
+**4. Place that file at the project root**, i.e. `vercel-song-api/cookies.txt`
+   (same folder as `package.json` and `vercel.json`).
 
-**5. Commit and push them to your repo.**
+**5. Commit and push it to your repo.**
    ```
-   git add cookies.txt cookies1.txt cookies2.txt
+   git add cookies.txt
    git commit -m "add yt-dlp cookies"
    git push
    ```
 
-**6. Vercel auto-redeploys.** `song.js` automatically picks up every
-   `cookies*.txt` file it finds at the project root and tries them in
-   order — no environment variable or extra config needed.
-
-The API response includes a `cookieUsed` field showing which account's
-cookies actually served a successful request — handy for spotting which
-one gets flagged first, if that ever happens.
+**6. Vercel auto-redeploys.** `song.js` automatically picks up
+   `cookies.txt` from the project root — no environment variable or extra
+   config needed.
 
 **Cookies expire eventually** (Google periodically invalidates sessions).
-If the bot-detection error comes back for a given account, just repeat
-steps 1-5 for that account's file to refresh it.
+If the bot-detection error comes back after a while, just repeat steps 1-5
+with a fresh export to replace the file.
 
 ## Limitations / things to know
 
