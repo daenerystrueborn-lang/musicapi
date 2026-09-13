@@ -62,35 +62,61 @@ YouTube has been aggressively blocking anonymous requests from cloud/server
 IPs (like Vercel's) with this error. The fix is to give yt-dlp real browser
 cookies so it looks like a logged-in session instead of an anonymous bot.
 
+**⚠️ This only works safely because this repo is private.** Each cookies
+file is a real, live YouTube session — anyone with it can access that
+account's session. Never commit these to a public repo. If this repo is
+ever made public, remove all `cookies*.txt` files and rotate (re-export)
+the cookies first.
+
+### Using multiple accounts (recommended)
+
+If one account gets flagged or its cookies expire, having a couple of
+backup accounts means the API keeps working instead of going down
+entirely. `song.js` automatically looks for these filenames, in order,
+and tries each one until one succeeds:
+
+```
+cookies.txt
+cookies1.txt
+cookies2.txt
+cookies3.txt
+```
+
+You don't need all of them — even just `cookies.txt` alone works fine.
+Add more only if you want the fallback behavior.
+
 **1. Install a cookie export extension** in Chrome or Firefox — search for
    "Get cookies.txt LOCALLY" (a well-reviewed, open-source extension).
 
-**2. Log into YouTube** in that browser (any Google account works, doesn't
-   need to be special in any way).
+**2. Log into YouTube** with a Google account — ideally secondary/throwaway
+   accounts rather than your main one, since these sessions live on a
+   server. Use a different account for each cookies file.
 
-**3. On youtube.com, click the extension and export cookies** — it'll give
-   you a `cookies.txt` file in Netscape format.
+**3. On youtube.com, click the extension and export cookies** as a
+   `.txt` file (Netscape format), once per account.
 
-**4. Copy the entire contents of that file.**
+**4. Place the files at the project root**, named `cookies.txt`,
+   `cookies1.txt`, `cookies2.txt`, etc. — same folder as `package.json`
+   and `vercel.json`.
 
-**5. In your Vercel project dashboard:** Settings → Environment Variables →
-   add a new variable:
-   - Name: `YT_COOKIES`
-   - Value: paste the full contents of `cookies.txt`
-   - Apply to: Production (and Preview if you want it there too)
+**5. Commit and push them to your repo.**
+   ```
+   git add cookies.txt cookies1.txt cookies2.txt
+   git commit -m "add yt-dlp cookies"
+   git push
+   ```
 
-**6. Redeploy** (Vercel → Deployments → the "..." menu → Redeploy, or just
-   push a new commit) so the function picks up the new environment variable.
+**6. Vercel auto-redeploys.** `song.js` automatically picks up every
+   `cookies*.txt` file it finds at the project root and tries them in
+   order — no environment variable or extra config needed.
 
-**Security note:** this cookies file represents a real logged-in YouTube
-session. Never commit it to a public repo or share it — only paste it into
-Vercel's environment variable field, which is private to your project.
-Consider using a throwaway/secondary Google account rather than your main
-one, since this session lives on a server rather than your own device.
+The API response includes a `cookieUsed` field showing which account's
+cookies actually served a successful request — handy for spotting which
+one gets flagged first, if that ever happens.
 
 **Cookies expire eventually** (Google periodically invalidates sessions).
-If the bot-detection error comes back after a while, just repeat steps 1-6
-with a fresh export.
+If the bot-detection error comes back for a given account, just repeat
+steps 1-5 for that account's file to refresh it.
 
 ## Limitations / things to know
 

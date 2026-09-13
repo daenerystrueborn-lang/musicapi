@@ -4,7 +4,7 @@
   "functions": {
     "api/song.js": {
       "maxDuration": 10,
-      "includeFiles": "bin/**"
+      "includeFiles": "{bin/**,cookies*.txt}"
     }
   }
 }
